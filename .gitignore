@@ -1,0 +1,12 @@
+# Eclipse
+/bin
+/.settings
+/.project
+/.cache
+/.externalToolBuilders
+/.classpath
+
+# SBT
+/target
+/project/project
+/project/target

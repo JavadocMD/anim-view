@@ -1,0 +1,66 @@
+.root {
+	-fx-background-color: white;
+	-fx-background-image: url('stripes.png');
+	-fx-background-repeat: repeat;
+}
+
+.text-lg { -fx-font-size: 32pt; }
+.text-md { -fx-font-size: 20pt; }
+.text-sm { -fx-font-size: 12pt; }
+
+.menu-bar { -fx-background-color: #333; }
+.context-menu {
+	-fx-background-radius: 0;
+	-fx-background-color: #ddd;
+}
+
+.menu-bar .menu-button:hover, 
+.menu-bar .menu-button:focused, 
+.menu-bar .menu-button:showing,
+.menu-item:hover, 
+.menu-item:focused, 
+.menu-item:showing { -fx-background-color: slateblue; }
+
+.button, .color-picker {
+	button-color: lightgray;
+	-fx-text-alignment: center;
+	-fx-background-color: button-color;
+	-fx-background-radius: 0;
+	-fx-background-insets: 0;
+}
+.button:hover, .color-picker:hover {
+	-fx-background-color: derive(button-color, 10%);
+}
+.button:pressed, .color-picker:pressed {
+	-fx-background-color: derive(button-color, -10%);
+}
+
+.text-field {
+	-fx-font-size: 20pt;
+	-fx-alignment: center;
+    -fx-background-color: #efefef;
+    -fx-background-insets: 0;
+    -fx-background-radius: 0;
+}
+.text-field:focused {
+    -fx-background-color: #efefef;
+    -fx-background-insets: 0;
+    -fx-background-radius: 0;
+}
+
+
+#helpText {
+	-fx-text-fill: #efefef;
+	-fx-font-weight: bold;
+	-fx-font-size: 32pt;
+}
+
+#fps-label {
+	-fx-text-fill: #efefef;
+	-fx-font-weight: bold;
+	-fx-font-size: 20pt;
+}
+
+
+#play { button-color: lightgreen; -fx-background-insets: 0 4px 0 -4px; }
+#pause { button-color: lightpink; }
