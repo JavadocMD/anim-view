@@ -1,73 +1,74 @@
 package com.ornithoptergames.psav
 
-import Messages._
+import java.net.URL
+
+import scala.concurrent.duration._
+
 import akka.actor.ActorSystem
 import scalafx.Includes._
 import scalafx.application.Platform
+import scalafx.application.Platform.runLater
+import scalafx.geometry.Insets
+import scalafx.geometry.Pos
 import scalafx.scene.control.Button
+import scalafx.scene.control.ColorPicker
+import scalafx.scene.control.ContentDisplay
 import scalafx.scene.control.Label
-import scalafx.scene.control.Slider
-import scalafx.scene.layout.Priority
+import scalafx.scene.control.Menu
+import scalafx.scene.control.MenuBar
+import scalafx.scene.control.MenuItem
+import scalafx.scene.control.TextField
+import scalafx.scene.input.KeyCombination
+import scalafx.scene.layout.HBox
+import scalafx.scene.layout.VBox
+import scalafx.scene.paint.Color
+import scalafx.scene.paint.Color.sfxColor2jfx
+import scalafx.scene.text.Font
+import scalafx.scene.text.Text
+import scalafx.scene.text.TextAlignment
 import scalafx.stage.FileChooser
 import scalafx.stage.FileChooser.ExtensionFilter
 import scalafx.stage.Stage
-import scalafx.scene.control.ColorPicker
-import scalafx.scene.paint.Color
-import java.nio.file.WatchEvent.Kind
-import java.io.IOException
-import scalafx.scene.control.MenuBar
-import scalafx.scene.control.Menu
-import scalafx.scene.control.MenuItem
-import scalafx.scene.input.KeyCombination
-import scalafx.scene.input.KeyCode
-import scalafx.scene.control.SeparatorMenuItem
-import scalafx.scene.control.Tooltip
-import scalafx.scene.text.Font
-import scalafx.scene.text.Text
-import java.net.URL
-import scalafx.scene.text.TextAlignment
-import scalafx.scene.control.TextField
-import scalafx.scene.layout.VBox
-import scalafx.geometry.Insets
-import scalafx.geometry.Pos
-import scalafx.scene.layout.Region
-import scalafx.scene.image.Image
-import scalafx.scene.image.ImageView
-import scalafx.scene.control.ContentDisplay
+
+import Messages._
+import RxMessage.Implicits._
 
 object Resources {
   private def res(path: String): URL = this.getClass().getResource(path)
   private def resExt(path: String): String = res(path).toExternalForm()
   
   val fontawesome: Font = Font.loadFont(resExt("fontawesome-webfont.ttf"), 20)
-  val play: Image = new Image(resExt("play.png"))
-  val pause: Image = new Image(resExt("pause.png"))
 }
 
+object Config {
+  val defaultBgColor = Color.CornflowerBlue
+  val defaultFps = 12.0d
+}
 
-class Widgets(implicit stage: Stage, system: ActorSystem, msg: Messaging) {
+class Widgets(implicit stage: Stage, system: ActorSystem) {
   
   val helpText = new Label {
     id = "helpText"
     text = "Ctrl+O to open a Photoshop file\nas an animated frame set."
     textAlignment = TextAlignment.Center
     
-    msg.subscribe(canvas_!, receive {
-      case AnimationLoaded => Platform.runLater { visible = false }
-    })
+    animationLoaded.subscribe(_ => runLater { visible = false })
   }
+  
+  
+  val fileManager = new FileManager()
   
   
   val fileChooser = new FileChooser {
     title = "Open PSD File"
     extensionFilters += new ExtensionFilter("PSD Files", "*.psd")
   
-    def openPsd()(implicit stage: Stage): Unit = 
-      Option(showOpenDialog(stage)) foreach { f =>
+    def openPsd(): Unit = 
+      Option(showOpenDialog(stage)) foreach { file =>
         // Remember directory for next time.
-        initialDirectory = f.getParentFile
+        initialDirectory = file.getParentFile
         // Then message the file for loading.
-        msg.publish(LoadFile(f))
+        Messages.file.publish(file)
       }
   }
   
@@ -112,90 +113,103 @@ class Widgets(implicit stage: Stage, system: ActorSystem, msg: Messaging) {
     
     prefHeight = 60
     prefWidth  = 60
-//    maxHeight = Region.USE_PREF_SIZE
-//    maxWidth = Region.USE_PREF_SIZE
-//    minHeight = Region.USE_PREF_SIZE
-//    minWidth = Region.USE_PREF_SIZE
     
-    msg.subscribe(canvas_!, receive {
-      case AnimationPlaying => Platform.runLater { disable = false; requestFocus() }
-      case AnimationPaused  => Platform.runLater { disable = true }
-    })
+    animationPaused .subscribe(_ => runLater { disable = true })
+    animationPlaying.subscribe(_ => runLater { disable = false; requestFocus() })
     
-    onAction = () => msg.publish(Pause)
+    onAction = () => Messages.pause.publish()
   }
   
   
-  val playButton = new FontAwesomeButton("Play","\uf04b", "text-lg") {
+  val playButton = new FontAwesomeButton("Play", "\uf04b", "text-lg") {
     id = "play"
     disable = true
     
     prefHeight = 60
     prefWidth  = 60
     
-    msg.subscribe(canvas_!, receive {
-        case AnimationPlaying => Platform.runLater { disable = true }
-        case AnimationPaused  => Platform.runLater { disable = false; requestFocus() }
-    })
+    animationPlaying.subscribe(_ => runLater { disable = true })
+    animationPaused .subscribe(_ => runLater { disable = false; requestFocus() })
     
-    onAction = () => msg.publish(Play)
+    onAction = () => Messages.play.publish()
   }
-
+  
   
   val fpsLabel = new Label("FPS") {
-    id = "fps-label"
     rotate = -90
-    margin = Insets(0, 0, 0, 20)
   }
-
   
   val fpsInput = new TextField {
-    text = "12"
+    text = "%.0f".format(Config.defaultFps)
     prefColumnCount = 2
-    margin = Insets(0, 2, 0, 0)
     prefHeight = 44
     prefWidth = 44
     
     val fpsFormat = "^([1-9][0-9]?)$".r
     
-    def fps: Int = fpsFormat.findFirstIn(text.value).map(_.toInt).getOrElse(12)
+    def fps: Int = fpsFormat.findFirstIn(text.value).map(_.toInt).getOrElse(Config.defaultFps.toInt)
     
     text.onChange((obsval, prev, now) => now match {
-      case fpsFormat(x) => msg.publish(SetFps(now.toDouble))
+      case fpsFormat(x) => Messages.fps.publish(now.toDouble)
       case _            => text = prev
     })
     
-    msg.subscribe(fps_?, receive {
-      case FpsUp   => Platform.runLater { text = (fps + 1).toString }
-      case FpsDown => Platform.runLater { text = (fps - 1).toString }
-    })
-    
-    msg.publish(SetFps(fps))
+    fpsUp  .subscribe(_ => runLater { text = (fps + 1).toString })
+    fpsDown.subscribe(_ => runLater { text = (fps - 1).toString })
   }
-  
   
   val fpsArrows = new VBox {
     this.spacing = 2
     this.alignment = Pos.Center
     this.children = Seq(
       new FontAwesomeButton("Up", "\uf0d8", "text-sm") {
-        this.onAction = () => msg.publish(FpsUp)
+        this.onAction = () => fpsUp.publish()
       },
       new FontAwesomeButton("Down", "\uf0d7", "text-sm") {
-        this.onAction = () => msg.publish(FpsDown)
+        this.onAction = () => fpsDown.publish()
       })
+  }
+  
+  val fpsControl = new HBox {
+    styleClass add "fps-control"
+    alignment = Pos.CenterLeft
+    children = Seq(
+      fpsLabel,
+      fpsInput,
+      fpsArrows.withMargin(Left(2)))
   }
   
   
   val colorPicker = new ColorPicker {
-    value = Color.CornflowerBlue
+    value = Config.defaultBgColor
     visible = false
-    onAction = () => { msg.publish(SetBgColor(value.value)) }
-    msg.publish(SetBgColor(value.value))
+    prefWidth = 0
+    prefHeight = 0
+    maxWidth = 0
+    maxHeight = 0
+    
+    onAction = () => { bgColor.publish(value.value) }
   }
   
   
-  val canvas = new FrameCanvas { visible = false }
+  val canvas = new FrameCanvas {
+    import FrameCanvasFsm._
+    
+    visible = false
+    
+    bgColor.subscribe { setBgColor(_) }
+    
+    val limit = Duration(500, MILLISECONDS) // implicits not finding this... *sigh*
+    
+    fps.observable.throttleLast(limit).forwardTo(fsm, SetFps(_))
+    frames.forwardTo(fsm, SetFrames(_))
+    play  .forwardTo(fsm, Play)
+    pause .forwardTo(fsm, Pause)
+    
+    def playing() = animationPlaying.publish()
+    def paused() = animationPaused.publish()
+    def loaded() = animationLoaded.publish()
+  }
   
   
   class FontAwesomeButton(name: String, fontAwesomeIcon: String, iconClass: String) extends Button(name) {

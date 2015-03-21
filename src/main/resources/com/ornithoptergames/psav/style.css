@@ -29,7 +29,7 @@
 	-fx-background-insets: 0;
 }
 .button:hover, .color-picker:hover {
-	-fx-background-color: derive(button-color, 10%);
+	-fx-background-color: derive(button-color, 20%);
 }
 .button:pressed, .color-picker:pressed {
 	-fx-background-color: derive(button-color, -10%);
@@ -55,7 +55,7 @@
 	-fx-font-size: 32pt;
 }
 
-#fps-label {
+.fps-control .label {
 	-fx-text-fill: #efefef;
 	-fx-font-weight: bold;
 	-fx-font-size: 20pt;

@@ -1,50 +1,30 @@
 package com.ornithoptergames.psav
 
-import akka.actor.Actor
-import com.ornithoptergames.psav.Messages._
-import akka.actor.ActorLogging
-import com.beachape.filemanagement.MonitorActor
-import akka.actor.Props
-import com.beachape.filemanagement.Messages.UnRegisterCallback
-import java.nio.file.StandardWatchEventKinds._
-import java.nio.file.Path
-import com.beachape.filemanagement.RegistryTypes.Callback
-import com.beachape.filemanagement.Messages.RegisterCallback
+import java.nio.file.StandardWatchEventKinds.ENTRY_MODIFY
 
-class FileManager(msg: Messaging) extends Actor with ActorLogging {
+import com.beachape.filemanagement.RxMonitor
+import com.ornithoptergames.psav.Messages.file
 
-  val fileMonitorProps = Props(classOf[MonitorActor], 5)
-  val fileMonitor = context.actorOf(fileMonitorProps)
+import akka.actor.ActorSystem
 
-  private[this] var watchedPath: Option[Path] = None
-
-  def receive = {
-    case LoadFile(file) => PsdLoader.loadPsd(file).foreach { fi =>
-      // stop watching old file
-      watchedPath.foreach { p => fileMonitor ! UnRegisterCallback(ENTRY_MODIFY, false, p) }
-
-      val newPath = file.toPath()
-      
-      // start watching new file
-      fileMonitor ! RegisterCallback(
-          ENTRY_MODIFY,
-          None,
-          false,
-          newPath,
-          onModify)
-
-      watchedPath = Some(newPath)
-      
-      msg.publish(SetFrames(fi), self)
-      msg.publish(Play, self)
+class FileManager(implicit system: ActorSystem) {
+  
+  // fileWatcher will monitor a path and emit the file when it's modified.
+  val fileWatcher = RxMonitor()
+  
+  // Whenever we see a *new* file, change fileWatcher's watching path.
+  file.observable.distinctUntilChanged.subscribe { file =>
+    fileWatcher.registerPath(ENTRY_MODIFY, file.toPath())
+  }
+  
+  // Whenever fileWatcher sees a reload, re-publish the file.
+  fileWatcher.observable.subscribe { event => file.publish(event.path.toFile()) }
+  
+  // And whenever a file is published, load & publish the frames and publish the play message.
+  file.observable.subscribe { file =>
+    PsdLoader.loadPsd(file).foreach { frames => 
+      Messages.frames.publish(frames)
+      Messages.play.publish()
     }
   }
-
-  val onModify: Callback = (path: Path) =>
-    PsdLoader.loadPsd(path.toFile()).foreach { fi => 
-      msg.publish(SetFrames(fi))
-      msg.publish(Play, self)
-    }
-
-  msg.subscribe(file_?, self)
 }

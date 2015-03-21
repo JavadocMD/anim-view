@@ -1,7 +1,7 @@
 package com.ornithoptergames.psav
 
-import Messages._
 import akka.actor.ActorSystem
+import akka.actor.Props
 import scalafx.Includes._
 import scalafx.application.JFXApp
 import scalafx.geometry.Insets
@@ -10,28 +10,16 @@ import scalafx.scene.Scene
 import scalafx.scene.layout.BorderPane
 import scalafx.scene.layout.HBox
 import scalafx.scene.layout.StackPane
-import scalafx.scene.layout.VBox
 import scalafx.stage.Stage
-import scalafx.scene.layout.AnchorPane
-import scalafx.scene.layout.Priority
-import scalafx.scene.paint.Color
-import akka.actor.Props
-import scalafx.scene.control.MenuBar
-import scalafx.scene.control.Menu
-import scalafx.scene.control.MenuItem
-import scalafx.scene.input.KeyCombination
 
 object PsAnimViewer extends JFXApp {
   implicit val system = ActorSystem("ps-anim-viewer")
-  implicit val msg = new Messaging(system)
   implicit def implStage: Stage = stage
-  
-  system.actorOf(Props(new FileManager(msg)))
   
   val widgets = new Widgets
     
   stage = new JFXApp.PrimaryStage {
-    this.title = "Photoshop Animation Viewer"
+    this.title = "Animation Viewer"
     this.width = 1024
     this.height = 768
     
@@ -44,6 +32,7 @@ object PsAnimViewer extends JFXApp {
     lazy val bp = new BorderPane {
       this.top = widgets.menu
       
+      // The color picker is an invisible item (until it's activated); might as well put it here.
       this.left = widgets.colorPicker
       
       this.bottom = new HBox {
@@ -54,9 +43,7 @@ object PsAnimViewer extends JFXApp {
         this.children = Seq(
           widgets.playButton,
           widgets.pauseButton,
-          widgets.fpsLabel,
-          widgets.fpsInput,
-          widgets.fpsArrows
+          widgets.fpsControl.withMargin(Left(20))
         )
       }
 
@@ -68,10 +55,12 @@ object PsAnimViewer extends JFXApp {
       }
     }
     
-    this.onCloseRequest = () => { system.shutdown() }
+    this.onCloseRequest = () => {
+      widgets.fileManager.fileWatcher.stop()
+      system.shutdown()
+    }
     
     this.onShown = () => {
-      msg.init() // deliver messages that were logged during initialization
       bp.requestFocus() // stop the FPS input from being focused on startup
     }
   }

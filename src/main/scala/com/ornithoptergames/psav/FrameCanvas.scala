@@ -1,7 +1,5 @@
 package com.ornithoptergames.psav
 
-import Messages._
-import akka.actor.Actor.Receive
 import akka.actor.ActorSystem
 import akka.actor.FSM
 import akka.actor.Props
@@ -11,25 +9,19 @@ import scalafx.animation.Timeline
 import scalafx.scene.canvas.Canvas
 import scalafx.scene.image.Image
 import scalafx.scene.paint.Color
-import scalafx.scene.paint.Color._
 import scalafx.util.Duration
+
+import Messages._
 import FrameCanvasFsm._
 
-class FrameCanvas(implicit system: ActorSystem, msg: Messaging) extends Canvas {
-  val actor = system.actorOf(Props(new FrameCanvasFsm(this)), "canvas")
-  msg.subscribe(fps_?, actor)
-  msg.subscribe(frames_?, actor)
-  msg.subscribe(canvas_?, actor)
-  
-  msg.subscribe(canvas_?, receive { case SetBgColor(color) => setBgColor(color) })
+abstract class FrameCanvas(implicit system: ActorSystem) extends Canvas {
+  val fsm = system.actorOf(Props(new FrameCanvasFsm(this)), "canvas-fsm")
   
   val gc = graphicsContext2D
-  gc.fill = White
-  gc.stroke = Black
+  gc.fill = Color.White
+  gc.stroke = Color.Black
   
-  def setBgColor(color: Color): Unit = {
-    gc.fill = color
-  }
+  def setBgColor(color: Color): Unit = { gc.fill = color }
   
   def updateSize(f: FrameInfo) = {
     width = f.size.w + 2
@@ -59,6 +51,11 @@ class FrameCanvas(implicit system: ActorSystem, msg: Messaging) extends Canvas {
       }
     }
   }
+  
+  // For use as callbacks from the FSM
+  def playing(): Unit
+  def paused(): Unit
+  def loaded(): Unit
 }
 
 
@@ -70,17 +67,29 @@ object FrameCanvasFsm {
   case object Paused  extends State
   case object Playing extends State
   
+  sealed trait Message
+  case class SetFps(fps: Double) extends Message {
+    lazy val millisPerFrame: Double = 1000d / fps
+    lazy val secondsPerFrame: Double = 1d / fps
+  }
+  case class SetFrames(frameInfo: FrameInfo) extends Message
+  case object Play  extends Message
+  case object Pause extends Message
+  
   sealed trait Data
   case object NoData extends Data
   case class Fps(fps: Double) extends Data
   case class Frames(frameInfo: FrameInfo) extends Data
   case class Full(fps: Double, frameInfo: FrameInfo, timeline: Timeline) extends Data {
+    /* Note: these side-effecting methods are sort of bad form, 
+     * but FSM isn't firing same-state transitions in this version, so it's kind of necessary.
+     */
     def playing(): Full = { timeline.play(); this }
     def paused(): Full = { timeline.pause(); this }
   }
 }
 
-class FrameCanvasFsm(canvas: FrameCanvas)(implicit msg: Messaging)
+class FrameCanvasFsm(canvas: FrameCanvas)
   extends FSM[State, Data] {
   
   startWith(Initial, NoData)
@@ -116,17 +125,19 @@ class FrameCanvasFsm(canvas: FrameCanvas)(implicit msg: Messaging)
   }
   
   onTransition {
-    case s -> Playing if s != Playing => msg.publish(AnimationPlaying, self)
-    case s -> Paused  if s != Paused  => msg.publish(AnimationPaused, self)
-    case s -> Loaded  if s != Loaded  => msg.publish(AnimationLoaded, self)
+    case s -> Playing if s != Playing => canvas.playing()
+    case s -> Paused  if s != Paused  => canvas.paused()
+    case s -> Loaded  if s != Loaded  => canvas.loaded()
   }
   
   def timelineData(fps: Double, frameInfo: FrameInfo, oldTimeline: Timeline): Full = {
-    oldTimeline.stop()
+    // Note: more nasty side-effecting to get around lack of FSM same-state transitions.
+    oldTimeline.stop() 
     timelineData(fps, frameInfo)
   }
     
   def timelineData(fps: Double, frameInfo: FrameInfo): Full = {
+    // Note: more nasty side-effecting to get around lack of FSM same-state transitions.
     canvas.updateSize(frameInfo)
     Full(fps, frameInfo, canvas.timeline(fps, frameInfo))
   }
