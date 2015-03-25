@@ -11,7 +11,6 @@ import scalafx.scene.image.Image
 import scalafx.scene.paint.Color
 import scalafx.util.Duration
 
-import Messages._
 import FrameCanvasFsm._
 
 abstract class FrameCanvas(implicit system: ActorSystem) extends Canvas {

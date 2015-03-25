@@ -1,12 +1,12 @@
 package com.ornithoptergames.psav
 
 import akka.actor.ActorSystem
-import akka.actor.Props
 import scalafx.Includes._
 import scalafx.application.JFXApp
 import scalafx.geometry.Insets
 import scalafx.geometry.Pos
 import scalafx.scene.Scene
+import scalafx.scene.image.Image._
 import scalafx.scene.layout.BorderPane
 import scalafx.scene.layout.HBox
 import scalafx.scene.layout.StackPane
@@ -22,6 +22,8 @@ object PsAnimViewer extends JFXApp {
     this.title = "Animation Viewer"
     this.width = 1024
     this.height = 768
+    
+    Resources.icons.foreach { i => this.icons add i }
     
     this.scene = new Scene {
       this.stylesheets add "com/ornithoptergames/psav/style.css"
@@ -55,13 +57,13 @@ object PsAnimViewer extends JFXApp {
       }
     }
     
+    this.onShown = () => {
+      bp.requestFocus() // stop the FPS input from being focused on startup
+    }
+    
     this.onCloseRequest = () => {
       widgets.fileManager.fileWatcher.stop()
       system.shutdown()
-    }
-    
-    this.onShown = () => {
-      bp.requestFocus() // stop the FPS input from being focused on startup
     }
   }
 }

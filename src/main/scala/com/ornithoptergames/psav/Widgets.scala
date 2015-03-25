@@ -5,10 +5,7 @@ import java.net.URL
 import scala.concurrent.duration.Duration
 import scala.concurrent.duration.MILLISECONDS
 
-import FrameCanvasFsm.Pause
-import FrameCanvasFsm.Play
-import FrameCanvasFsm.SetFps
-import FrameCanvasFsm.SetFrames
+import FrameCanvasFsm._
 import Messages._
 import RxMessage.Implicits.ActorForwardable
 import akka.actor.ActorSystem
@@ -25,6 +22,7 @@ import scalafx.scene.control.MenuBar
 import scalafx.scene.control.MenuItem
 import scalafx.scene.control.ProgressIndicator
 import scalafx.scene.control.TextField
+import scalafx.scene.image.Image
 import scalafx.scene.input.KeyCombination
 import scalafx.scene.layout.HBox
 import scalafx.scene.layout.VBox
@@ -42,6 +40,9 @@ object Resources {
   private def resExt(path: String): String = res(path).toExternalForm()
   
   val fontawesome: Font = Font.loadFont(resExt("fontawesome-webfont.ttf"), 20)
+  
+  // JavaFX appears to ignore different sizes of icons and just uses the last one, so whatever.
+  val icons: List[Image] = List(new Image(resExt("icon-64.png")))
 }
 
 object Config {

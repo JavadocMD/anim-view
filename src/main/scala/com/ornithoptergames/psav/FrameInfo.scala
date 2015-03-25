@@ -1,6 +1,7 @@
 package com.ornithoptergames.psav
 
 import scala.xml.Node
+
 import javafx.scene.image.WritableImage
 
 case class Size(val w: Double, val h: Double)
