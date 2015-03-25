@@ -1,11 +1,7 @@
 package com.ornithoptergames
 
-import scalafx.scene.Node
 import scalafx.geometry.Insets
-import scala.concurrent.duration.Duration
-import rx.lang.scala.Observable
-import rx.schedulers.Schedulers
-import com.ornithoptergames.psav.OperatorThrottleAggregatorFirst
+import scalafx.scene.Node
 
 package object psav {
 

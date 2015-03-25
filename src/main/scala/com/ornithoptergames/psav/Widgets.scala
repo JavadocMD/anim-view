@@ -43,6 +43,7 @@ object Resources {
 object Config {
   val defaultBgColor = Color.CornflowerBlue
   val defaultFps = 12.0d
+  val defaultFilters = List("^Background$".r, "^[-].*$".r)
 }
 
 class Widgets(implicit stage: Stage, system: ActorSystem) {
