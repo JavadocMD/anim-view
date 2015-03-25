@@ -50,7 +50,7 @@ object PsAnimViewer extends JFXApp {
       this.center = new StackPane {
         this.styleClass add "image-panel"
         
-        this.children = Seq(widgets.helpText, widgets.canvas)
+        this.children = Seq(widgets.helpText, widgets.loading, widgets.canvas)
         this.alignment = Pos.Center
       }
     }

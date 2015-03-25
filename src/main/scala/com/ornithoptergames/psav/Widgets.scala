@@ -2,11 +2,17 @@ package com.ornithoptergames.psav
 
 import java.net.URL
 
-import scala.concurrent.duration._
+import scala.concurrent.duration.Duration
+import scala.concurrent.duration.MILLISECONDS
 
+import FrameCanvasFsm.Pause
+import FrameCanvasFsm.Play
+import FrameCanvasFsm.SetFps
+import FrameCanvasFsm.SetFrames
+import Messages._
+import RxMessage.Implicits.ActorForwardable
 import akka.actor.ActorSystem
 import scalafx.Includes._
-import scalafx.application.Platform
 import scalafx.application.Platform.runLater
 import scalafx.geometry.Insets
 import scalafx.geometry.Pos
@@ -17,21 +23,19 @@ import scalafx.scene.control.Label
 import scalafx.scene.control.Menu
 import scalafx.scene.control.MenuBar
 import scalafx.scene.control.MenuItem
+import scalafx.scene.control.ProgressIndicator
 import scalafx.scene.control.TextField
 import scalafx.scene.input.KeyCombination
 import scalafx.scene.layout.HBox
 import scalafx.scene.layout.VBox
 import scalafx.scene.paint.Color
-import scalafx.scene.paint.Color.sfxColor2jfx
+import scalafx.scene.paint.Color._
 import scalafx.scene.text.Font
 import scalafx.scene.text.Text
 import scalafx.scene.text.TextAlignment
 import scalafx.stage.FileChooser
 import scalafx.stage.FileChooser.ExtensionFilter
 import scalafx.stage.Stage
-
-import Messages._
-import RxMessage.Implicits._
 
 object Resources {
   private def res(path: String): URL = this.getClass().getResource(path)
@@ -184,12 +188,23 @@ class Widgets(implicit stage: Stage, system: ActorSystem) {
   val colorPicker = new ColorPicker {
     value = Config.defaultBgColor
     visible = false
-    prefWidth = 0
-    prefHeight = 0
-    maxWidth = 0
-    maxHeight = 0
+    forceSize(this, 0, 0)
     
     onAction = () => { bgColor.publish(value.value) }
+  }
+  
+  
+  val loading = new ProgressIndicator {
+    progress = ProgressIndicator.INDETERMINATE_PROGRESS
+    visible = false
+    forceSize(this, 25, 25)
+    margin = Insets(5)
+    alignmentInParent = Pos.TopRight
+    
+    // Show when loading a file, hide when animation is loaded.
+    val show = file.observable.map(_ => true)
+    val hide = animationLoaded.observable.map(_ => false)
+    (show merge hide).subscribe(v => runLater { visible = v })
   }
   
   

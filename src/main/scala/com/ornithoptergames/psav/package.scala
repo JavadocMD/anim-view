@@ -2,6 +2,7 @@ package com.ornithoptergames
 
 import scalafx.geometry.Insets
 import scalafx.scene.Node
+import scalafx.scene.control.Control
 
 package object psav {
 
@@ -10,6 +11,15 @@ package object psav {
       node.margin = insets
       node
     }
+  }
+  
+  def forceSize(n: Control, width: Double, height: Double) = {
+    n.prefWidth = width
+    n.minWidth = width
+    n.maxWidth = width
+    n.prefHeight = height
+    n.minHeight = height
+    n.maxHeight = height
   }
   
   object Left { def apply(left: Double) = Insets(0,0,0,left) }
