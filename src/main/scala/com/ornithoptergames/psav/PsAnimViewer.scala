@@ -13,7 +13,7 @@ import scalafx.scene.layout.StackPane
 import scalafx.stage.Stage
 
 object PsAnimViewer extends JFXApp {
-  implicit val system = ActorSystem("ps-anim-viewer")
+  implicit val system = ActorSystem("anim-view")
   implicit def implStage: Stage = stage
   
   val widgets = new Widgets
