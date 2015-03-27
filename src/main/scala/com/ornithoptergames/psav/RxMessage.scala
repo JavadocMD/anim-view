@@ -69,7 +69,7 @@ class ImpulseRxMessage(wrappedSubject: Subject[RxMessage.ImpulseMessage])
   */
 class MostRecent[T](obs: Observable[T]) {
   private[this] var mostRecent: Option[T] = None
-  obs.subscribe { t => println("updated!"); mostRecent = Option(t) }
+  obs.subscribe { t => mostRecent = Option(t) }
   
   def value: Option[T] = mostRecent
   def get: T = mostRecent.get
