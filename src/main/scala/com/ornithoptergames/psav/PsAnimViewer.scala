@@ -58,7 +58,10 @@ object PsAnimViewer extends JFXApp {
     }
     
     this.onShown = () => {
-      bp.requestFocus() // stop the FPS input from being focused on startup
+      // stop the FPS input from being focused on startup
+      bp.requestFocus()
+      // prevent canvas from covering menu
+      widgets.menu.toFront()
     }
     
     this.onCloseRequest = () => {
