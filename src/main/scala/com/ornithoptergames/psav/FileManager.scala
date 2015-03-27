@@ -14,7 +14,7 @@ import akka.actor.ActorSystem
 class FileManager(implicit system: ActorSystem) {
   
   // fileWatcher will monitor a path and emit the file when it's modified.
-  val fileWatcher = RxMonitor(system)
+  val fileWatcher = RxMonitor()
   
   // Whenever we see a *new* file, change fileWatcher's watching path.
   file.observable.distinctUntilChanged.subscribe { file =>
