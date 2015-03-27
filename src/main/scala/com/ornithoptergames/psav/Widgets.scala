@@ -218,7 +218,7 @@ class Widgets(implicit stage: Stage, system: ActorSystem) {
     bgColor.subscribe { setBgColor(_) }
     
     val limit = Duration(500, MILLISECONDS) // implicits not finding this... *sigh*
-    fps.observable.throttleLast(limit).forwardTo(fsm, SetFps(_))
+    fps.observable.debounce(limit).forwardTo(fsm, SetFps(_))
     
     newFrames.forwardTo(fsm, NewFrames(_))
     updateFrames.forwardTo(fsm, UpdateFrames(_))
