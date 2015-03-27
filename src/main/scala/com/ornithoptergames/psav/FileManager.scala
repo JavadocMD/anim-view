@@ -6,8 +6,7 @@ import java.nio.file.StandardWatchEventKinds.ENTRY_MODIFY
 import scala.util.matching.Regex
 
 import com.beachape.filemanagement.RxMonitor
-import com.ornithoptergames.psav.Messages.file
-import com.ornithoptergames.psav.Messages.frameFilter
+import com.ornithoptergames.psav.Messages._
 
 import akka.actor.ActorSystem
 
@@ -16,29 +15,32 @@ class FileManager(implicit system: ActorSystem) {
   // fileWatcher will monitor a path and emit the file when it's modified.
   val fileWatcher = RxMonitor()
   
-  // Whenever we see a *new* file, change fileWatcher's watching path.
-  file.observable.distinctUntilChanged.subscribe { file =>
+  // When we see a new file, change fileWatcher's watching path.
+  newFile.observable.subscribe { file =>
     // Registration is "bossy" by default here: don't have to worry about unregistering old paths.
     fileWatcher.registerPath(ENTRY_MODIFY, file.toPath())
   }
   
-  // Whenever fileWatcher sees a reload, re-publish the file.
-  fileWatcher.observable.subscribe { event => file.publish(event.path.toFile()) }
+  // When fileWatcher sees a reload, publish an updated file.
+  fileWatcher.observable.subscribe { event => updateFile.publish(event.path.toFile()) }
   
-  /* And whenever a file is published or the frame-name exclude list changes, 
-   * load & publish the frames and publish the play message. */
-  val publishFrames: Function1[(File, List[Regex]), Unit] = {
+  
+  def publishFrames(publishTo: RxMessage[FrameInfo]): Function1[(File, List[Regex]), Unit] = {
     case ((file, filters)) => {
       val exclude = (f: Frame) => filters.exists { _.pattern.matcher(f.name).matches() }
       
       PsdLoader.loadPsd(file).foreach { info =>
         val filteredFrames = info.frames.filterNot(exclude)
         val filteredInfo = FrameInfo(info.size, filteredFrames)
-        Messages.frames.publish(filteredInfo)
-        Messages.play.publish()
+        publishTo.publish(filteredInfo)
       }
     }
   }
   
-  file.observable.combineLatest(frameFilter.observable).subscribe(publishFrames)
+  // When a file is updated or the frame-name exclude list changes, publish updated frames.
+  updateFile.observable.combineLatest(frameFilter.observable).subscribe(publishFrames(Messages.updateFrames))
+  
+  // When a new file is selected, publish new frames.
+  val mostRecentFrameFilter = new MostRecent(frameFilter.subject)
+  newFile.observable.map(f => (f, mostRecentFrameFilter.get)).subscribe(publishFrames(Messages.newFrames))
 }

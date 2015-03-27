@@ -74,7 +74,7 @@ class Widgets(implicit stage: Stage, system: ActorSystem) {
         // Remember directory for next time.
         initialDirectory = file.getParentFile
         // Then message the file for loading.
-        Messages.file.publish(file)
+        Messages.newFile.publish(file)
       }
   }
   
@@ -203,7 +203,7 @@ class Widgets(implicit stage: Stage, system: ActorSystem) {
     alignmentInParent = Pos.TopRight
     
     // Show when loading a file, hide when animation is loaded.
-    val show = file.observable.map(_ => true)
+    val show = (newFile.observable merge updateFile.observable).map(_ => true)
     val hide = animationLoaded.observable.map(_ => false)
     (show merge hide).subscribe(v => runLater { visible = v })
   }
@@ -214,14 +214,17 @@ class Widgets(implicit stage: Stage, system: ActorSystem) {
     
     visible = false
     
+    // Configure event handling and emitting on this instance.
     bgColor.subscribe { setBgColor(_) }
     
     val limit = Duration(500, MILLISECONDS) // implicits not finding this... *sigh*
-    
     fps.observable.throttleLast(limit).forwardTo(fsm, SetFps(_))
-    frames.forwardTo(fsm, SetFrames(_))
-    play  .forwardTo(fsm, Play)
-    pause .forwardTo(fsm, Pause)
+    
+    newFrames.forwardTo(fsm, NewFrames(_))
+    updateFrames.forwardTo(fsm, UpdateFrames(_))
+    
+    play.forwardTo(fsm, Play)
+    pause.forwardTo(fsm, Pause)
     
     def playing() = animationPlaying.publish()
     def paused() = animationPaused.publish()

@@ -1,5 +1,7 @@
 package com.ornithoptergames.psav
 
+import FrameCanvasFsm._
+
 import akka.actor.ActorSystem
 import akka.actor.FSM
 import akka.actor.Props
@@ -11,8 +13,6 @@ import scalafx.scene.image.Image
 import scalafx.scene.paint.Color
 import scalafx.util.Duration
 
-import FrameCanvasFsm._
-
 abstract class FrameCanvas(implicit system: ActorSystem) extends Canvas {
   val fsm = system.actorOf(Props(new FrameCanvasFsm(this)), "canvas-fsm")
   
@@ -20,7 +20,11 @@ abstract class FrameCanvas(implicit system: ActorSystem) extends Canvas {
   gc.fill = Color.White
   gc.stroke = Color.Black
   
-  def setBgColor(color: Color): Unit = { gc.fill = color }
+  def setBgColor(color: Color): Unit = {
+    gc.fill = color
+    // We can't see the color change unless we're playing.
+    fsm ! Play
+  }
   
   def updateSize(f: FrameInfo) = {
     width = f.size.w + 2
@@ -71,7 +75,8 @@ object FrameCanvasFsm {
     lazy val millisPerFrame: Double = 1000d / fps
     lazy val secondsPerFrame: Double = 1d / fps
   }
-  case class SetFrames(frameInfo: FrameInfo) extends Message
+  case class NewFrames(frameInfo: FrameInfo) extends Message
+  case class UpdateFrames(frameInfo: FrameInfo) extends Message
   case object Play  extends Message
   case object Pause extends Message
   
@@ -79,13 +84,7 @@ object FrameCanvasFsm {
   case object NoData extends Data
   case class Fps(fps: Double) extends Data
   case class Frames(frameInfo: FrameInfo) extends Data
-  case class Full(fps: Double, frameInfo: FrameInfo, timeline: Timeline) extends Data {
-    /* Note: these side-effecting methods are sort of bad form, 
-     * but FSM isn't firing same-state transitions in this version, so it's kind of necessary.
-     */
-    def playing(): Full = { timeline.play(); this }
-    def paused(): Full = { timeline.pause(); this }
-  }
+  case class Full(fps: Double, frameInfo: FrameInfo, timeline: Timeline) extends Data
 }
 
 class FrameCanvasFsm(canvas: FrameCanvas)
@@ -95,49 +94,72 @@ class FrameCanvasFsm(canvas: FrameCanvas)
   
   when(Initial) {
     case Event(SetFps(fps), NoData | Fps(_)) => stay() using Fps(fps)
-    case Event(SetFps(fps), Frames(fi))      => goto(Loaded) using timelineData(fps, fi)
+    case Event(SetFps(fps), Frames(fi))      => goto(Playing) using playing(fps, fi)
     
-    case Event(SetFrames(fi), NoData | Frames(_)) => stay() using Frames(fi)
-    case Event(SetFrames(fi), Fps(fps))           => goto(Loaded) using timelineData(fps, fi)
-    case _ => stay()
-  }
-  
-  when(Loaded) {
-    case Event(SetFps(fps), Full(_,fi,t))    => stay() using timelineData(fps, fi, t)
-    case Event(SetFrames(fi), Full(fps,_,t)) => goto(Loaded) using timelineData(fps, fi, t)
-    case Event(Play, f @ Full(_,_,_))        => goto(Playing) using f.playing()
+    case Event(NewFrames(fi), NoData | Frames(_)) => stay() using Frames(fi)
+    case Event(NewFrames(fi), Fps(fps))           => goto(Playing) using playing(fps, fi)
+    
+    case Event(UpdateFrames(fi), NoData | Frames(_)) => stay() using Frames(fi)
+    case Event(UpdateFrames(fi), Fps(fps))           => goto(Playing) using playing(fps, fi)
     case _ => stay()
   }
   
   when(Playing) {
-    case Event(Pause, f @ Full(_,_,_))       => goto(Paused) using f.paused()
-    case Event(SetFps(fps), Full(_,fi,t))    => goto(Playing) using timelineData(fps, fi, t).playing()
-    case Event(SetFrames(fi), Full(fps,_,t)) => goto(Loaded) using timelineData(fps, fi, t)
+    case Event(Pause, f @ Full(_,_,_))          => goto(Paused)  using paused(f)
+    case Event(SetFps(fps), Full(_,fi,t))       => goto(Playing) using playing(fps, fi, t)
+    case Event(NewFrames(fi), Full(fps,_,t))    => goto(Playing) using playing(fps, fi, t)
+    case Event(UpdateFrames(fi), Full(fps,_,t)) => goto(Playing) using playing(fps, fi, t)
     case _ => stay()
   }
   
   when(Paused) {
-    case Event(Play, f @ Full(_,_,_))        => goto(Playing) using f.playing()
-    case Event(SetFps(fps), Full(_,fi,t))    => goto(Paused) using timelineData(fps, fi, t).paused()
-    case Event(SetFrames(fi), Full(fps,_,t)) => goto(Loaded) using timelineData(fps, fi, t)
+    case Event(Play, f @ Full(_,_,_))           => goto(Playing) using playing(f)
+    case Event(SetFps(fps), Full(_,fi,t))       => goto(Paused)  using paused(fps, fi, t)
+    case Event(NewFrames(fi), Full(fps,_,t))    => goto(Playing) using playing(fps, fi, t)
+    case Event(UpdateFrames(fi), Full(fps,_,t)) => goto(Paused)  using paused(fps, fi, t)
     case _ => stay()
   }
   
-  onTransition {
-    case s -> Playing if s != Playing => canvas.playing()
-    case s -> Paused  if s != Paused  => canvas.paused()
-    case s -> Loaded  if s != Loaded  => canvas.loaded()
+  
+  /* Note: What follows is a kind of sloppy way to make the above event handlers cleaner
+   * and at the same time compensate for this version of Akka FSM which doesn't support
+   * same-state onTransition handlers. All the side-effecting -- manipulating the 'timeline',
+   * emitting reactive messages, and resizing -- is handled by these data constructor methods.
+   */
+  
+  private[this] def playing(fps: Double, frameInfo: FrameInfo, oldTimeline: Timeline): Full = {
+    oldTimeline.stop() 
+    playing(fps, frameInfo) // chain to next
   }
   
-  def timelineData(fps: Double, frameInfo: FrameInfo, oldTimeline: Timeline): Full = {
-    // Note: more nasty side-effecting to get around lack of FSM same-state transitions.
-    oldTimeline.stop() 
-    timelineData(fps, frameInfo)
+  private[this] def playing(fps: Double, frameInfo: FrameInfo): Full = {
+    val data = Full(fps, frameInfo, canvas.timeline(fps, frameInfo))
+    canvas.updateSize(data.frameInfo)
+    canvas.loaded()
+    playing(data) // chain to next
   }
-    
-  def timelineData(fps: Double, frameInfo: FrameInfo): Full = {
-    // Note: more nasty side-effecting to get around lack of FSM same-state transitions.
-    canvas.updateSize(frameInfo)
-    Full(fps, frameInfo, canvas.timeline(fps, frameInfo))
+  
+  private[this] def playing(data: Full): Full = {
+    data.timeline.play()
+    canvas.playing()
+    data
+  }
+  
+  private[this] def paused(fps: Double, frameInfo: FrameInfo, oldTimeline: Timeline): Full = {
+    oldTimeline.stop() 
+    paused(fps, frameInfo) // chain to next
+  }
+  
+  private[this] def paused(fps: Double, frameInfo: FrameInfo): Full = {
+    val data = Full(fps, frameInfo, canvas.timeline(fps, frameInfo))
+    canvas.updateSize(data.frameInfo)
+    canvas.loaded()
+    paused(data) // chain to next
+  }
+  
+  private[this] def paused(data: Full): Full = {
+    data.timeline.pause()
+    canvas.paused()
+    data
   }
 }

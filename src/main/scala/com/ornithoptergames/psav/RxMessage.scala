@@ -46,8 +46,7 @@ object RxMessage {
   */
 class RxMessage[T](wrappedSubject: Subject[T]) {
   val subject: Subject[T] = SerializedSubject(wrappedSubject)
-  val observable: ConnectableObservable[T] = subject.publish
-  observable.connect
+  def observable: ConnectableObservable[T] = { val o = subject.publish; o.connect; o }
   
   def publish(msg: T): Unit = subject.onNext(msg)
   def subscribe(onNext: T => Unit): Subscription = observable.subscribe(onNext)
@@ -62,4 +61,16 @@ class ImpulseRxMessage(wrappedSubject: Subject[RxMessage.ImpulseMessage])
   
   def publish(): Unit = publish(RxMessage.Impulse)
   def forwardTo(actor: ActorRef, asJust: Any): Subscription = observable.subscribe(x => actor ! asJust)
+}
+
+/** A utility for keeping track of only the most recent value of an observable.
+  * This is probably cheating in RxScala terms, but it's useful in combining observables
+  * to only send messages when a master observable does.
+  */
+class MostRecent[T](obs: Observable[T]) {
+  private[this] var mostRecent: Option[T] = None
+  obs.subscribe { t => println("updated!"); mostRecent = Option(t) }
+  
+  def value: Option[T] = mostRecent
+  def get: T = mostRecent.get
 }
