@@ -6,7 +6,7 @@ Check out the intro video here: http://youtu.be/KAiKDr-uafo
 
 ## Download
 
-Downloads are available in the [releases section](/releases).
+Downloads are available in the [releases section](../../releases).
 
 If you have a Java 7 Runtime installed, choose a "java7" download. Simply unpack it someplace convenient and run `anim-view-<version>.jar`
 
