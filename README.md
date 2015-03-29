@@ -6,7 +6,7 @@ Check out the intro video here: http://youtu.be/KAiKDr-uafo
 
 ## Download
 
-Downloads are available in the [releases section](//github.com/JavadocMD/anim-view/releases).
+Downloads are available in the [releases section](/releases).
 
 If you have a Java 7 Runtime installed, choose a "java7" download. Simply unpack it someplace convenient and run `anim-view-<version>.jar`
 
@@ -31,3 +31,9 @@ The FPS setting changes how quickly your frames are played. Values can range fro
 ## Thanks!
 
 I hope you'll find this tool useful as you develop animations. Feel free to get in touch with Ornithopter Games on [Twitter](http://twitter.com/OrnithopterGame) or at [the website](http://ornithoptergames.com/) if you have ideas on how Animation Viewer can be improved, or even if you just want to show off your work!
+
+Also thank you to these libraries without whose work Animation Viewer would have been impossible (or at least really, really hard.)
+
+* http://github.com/haraldk/TwelveMonkeys
+* http://github.com/lloydmeta/schwatcher
+* http://github.com/ReactiveX/RxScala
