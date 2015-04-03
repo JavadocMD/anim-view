@@ -1,14 +1,17 @@
 package com.ornithoptergames.psav
 
-import java.io.File
 import java.nio.file.StandardWatchEventKinds.ENTRY_MODIFY
 
-import scala.util.matching.Regex
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.duration._
 
 import com.beachape.filemanagement.RxMonitor
+import com.ornithoptergames.psav.FrameInfoLoader._
 import com.ornithoptergames.psav.Messages._
+import com.ornithoptergames.psav.RxMessage.Implicits._
 
 import akka.actor.ActorSystem
+import akka.util.Timeout
 
 class FileManager(implicit system: ActorSystem) {
   
@@ -24,23 +27,15 @@ class FileManager(implicit system: ActorSystem) {
   // When fileWatcher sees a reload, publish an updated file.
   fileWatcher.observable.subscribe { event => updateFile.publish(event.path.toFile()) }
   
-  
-  def publishFrames(publishTo: RxMessage[FrameInfo]): Function1[(File, List[Regex]), Unit] = {
-    case ((file, filters)) => {
-      val exclude = (f: Frame) => filters.exists { _.pattern.matcher(f.name).matches() }
-      
-      PsdLoader.loadPsd(file).foreach { info =>
-        val filteredFrames = info.frames.filterNot(exclude)
-        val filteredInfo = FrameInfo(info.size, filteredFrames)
-        publishTo.publish(filteredInfo)
-      }
-    }
-  }
+  implicit val timeout = Timeout(15 seconds)
+  val loader = system.actorSelection(system / FrameInfoLoader.actorName)
   
   // When a file is updated or the frame-name exclude list changes, publish updated frames.
-  updateFile.observable.combineLatest(frameFilter.observable).subscribe(publishFrames(Messages.updateFrames))
+  updateFile.observable.combineLatest(frameFilter.observable).map(Load.tupled)
+    .pipeThrough(loader, updateFrames, { case t => t.printStackTrace() })
   
   // When a new file is selected, publish new frames.
   val mostRecentFrameFilter = new MostRecent(frameFilter.subject)
-  newFile.observable.map(f => (f, mostRecentFrameFilter.get)).subscribe(publishFrames(Messages.newFrames))
+  newFile.observable.map(f => Load(f, mostRecentFrameFilter.get))
+    .pipeThrough(loader, newFrames, { case t => t.printStackTrace() })
 }

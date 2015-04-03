@@ -55,7 +55,7 @@ class Widgets(implicit stage: Stage, system: ActorSystem) {
   
   val helpText = new Label {
     id = "helpText"
-    text = "Ctrl+O to open a Photoshop file\nas an animated frame set."
+    text = "Ctrl+O to open an image file\nas an animated frame set."
     textAlignment = TextAlignment.Center
     
     animationLoaded.subscribe(_ => runLater { visible = false })
@@ -66,10 +66,13 @@ class Widgets(implicit stage: Stage, system: ActorSystem) {
   
   
   val fileChooser = new FileChooser {
-    title = "Open PSD File"
-    extensionFilters += new ExtensionFilter("PSD Files", "*.psd")
+    title = "Open File"
+    extensionFilters ++= Seq(
+      new ExtensionFilter("All Files", "*"),
+      new ExtensionFilter("PSD Files", "*.psd"),
+      new ExtensionFilter("SVG Files", "*.svg"))
   
-    def openPsd(): Unit = 
+    def choose(): Unit = 
       Option(showOpenDialog(stage)) foreach { file =>
         // Remember directory for next time.
         initialDirectory = file.getParentFile
@@ -89,7 +92,7 @@ class Widgets(implicit stage: Stage, system: ActorSystem) {
           new MenuItem("_Open...") {
             this.mnemonicParsing = true
             this.accelerator = KeyCombination("Ctrl+O")
-            this.onAction = () => fileChooser.openPsd()
+            this.onAction = () => fileChooser.choose()
           },
           new MenuItem("_Exit") {
             this.mnemonicParsing = true
@@ -182,7 +185,7 @@ class Widgets(implicit stage: Stage, system: ActorSystem) {
     children = Seq(
       fpsLabel,
       fpsInput,
-      fpsArrows.withMargin(Left(2)))
+      fpsArrows.withMargin(LeftInset(2)))
   }
   
   

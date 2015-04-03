@@ -1,7 +1,14 @@
 package com.ornithoptergames.psav
 
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
+import scala.util.Try
+
 import akka.actor.ActorRef
+import akka.actor.ActorSelection
 import akka.actor.actorRef2Scala
+import akka.pattern.ask
+import akka.util.Timeout
 import rx.lang.scala.Observable
 import rx.lang.scala.Subject
 import rx.lang.scala.Subscription
@@ -31,8 +38,23 @@ object RxMessage {
   object Implicits {
     
     implicit class ActorForwardable[T](obs: Observable[T]) {
+      
       def forwardTo(actor: ActorRef) = obs.subscribe(t => actor ! t)
+      
       def forwardTo(actor: ActorRef, as: T => Any) = obs.subscribe(t => actor ! as(t))
+      
+      /** Pipe messages to `actor`, expecting its response as a Try. Unwrap the Try
+        * by forwarding the contents of Success to another RxMessage, `then`, or
+        * by calling `recover` on Failure.
+        */
+      def pipeThrough[A](actor: ActorSelection, then: RxMessage[A], recover: PartialFunction[Throwable, Unit])
+          (implicit timeout: Timeout, executor: ExecutionContext) = {
+        
+        obs.subscribe { t =>
+          val future: Future[Try[A]] = (actor ? t).asInstanceOf[Future[Try[A]]]
+          FutureTry(future).flattenTry.map(m => then.publish(m)).recover(recover)
+        }
+      }
     }
   }
 }

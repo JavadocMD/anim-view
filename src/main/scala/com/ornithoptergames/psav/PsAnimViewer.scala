@@ -1,6 +1,7 @@
 package com.ornithoptergames.psav
 
 import akka.actor.ActorSystem
+import akka.actor.Props
 import scalafx.Includes._
 import scalafx.application.JFXApp
 import scalafx.geometry.Insets
@@ -14,6 +15,7 @@ import scalafx.stage.Stage
 
 object PsAnimViewer extends JFXApp {
   implicit val system = ActorSystem("anim-view")
+  system.actorOf(Props[FrameInfoLoader], FrameInfoLoader.actorName)
   implicit def implStage: Stage = stage
   
   val widgets = new Widgets
@@ -45,7 +47,7 @@ object PsAnimViewer extends JFXApp {
         this.children = Seq(
           widgets.playButton,
           widgets.pauseButton,
-          widgets.fpsControl.withMargin(Left(20))
+          widgets.fpsControl.withMargin(LeftInset(20))
         )
       }
 
