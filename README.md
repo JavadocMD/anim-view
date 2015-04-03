@@ -34,6 +34,6 @@ I hope you'll find this tool useful as you develop animations. Feel free to get 
 
 Also thank you to these libraries without whose work Animation Viewer would have been impossible (or at least really, really hard.)
 
-* http://github.com/haraldk/TwelveMonkeys
-* http://github.com/lloydmeta/schwatcher
-* http://github.com/ReactiveX/RxScala
+* [haraldk/TwelveMonkeys](//github.com/haraldk/TwelveMonkeys)
+* [lloydmeta/schwatcher](//github.com/lloydmeta/schwatcher)
+* [ReactiveX/RxScala](//github.com/ReactiveX/RxScala)
