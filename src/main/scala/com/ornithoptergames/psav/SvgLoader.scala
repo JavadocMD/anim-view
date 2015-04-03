@@ -78,7 +78,7 @@ object SvgLoader extends FileLoader {
         val src = ImageIO.createImageInputStream(bais)
         reader.setInput(src)
         val image = SwingFXUtils.toFXImage(reader.read(0), null)
-        Frame(layer.name, image, 0, layer.height, 0, layer.width)
+        Frame(image, layer.name, 0, layer.height, 0, layer.width)
       }
       
       /* Rasterize each frame. This would naturally result in a Seq[Try[Frame]] 
