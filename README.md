@@ -1,6 +1,6 @@
 # Animation Viewer
 
-A free, open-source tool to streamline your 2D sprite animation workflow in Photoshop.
+A free, open-source tool to streamline your 2D sprite animation workflow in Photoshop, Inkscape, and possibly other vector graphics programs.
 
 Check out the intro video here: http://youtu.be/KAiKDr-uafo
 
@@ -14,17 +14,17 @@ If you are on Windows and either don't want to install Java 7 *or* you have a di
 
 ## Usage
 
-Animation Viewer is designed to work with Photoshop files that are organized in a certain way.
+Animation Viewer is designed to work with files that are organized in a certain way.
 
-* Each animation frame should be a separate layer that overlaps directly with the layers under it.
+* Each animation frame should be a separate layer that overlaps directly with the layers under it. (In Photoshop, a top-level Layer Group will also be treated as a single frame.)
 * Frames should be ordered from bottom to top. The first frame will be on bottom and the last frame on top.
-* Any layer named "Background" or that starts with a dash (-) will be ignored. This way you can have a palette or other special-use layers that are not drawn into the animation.
+* Any top-level layer or layer-group named "Background" or that starts with a dash (-) will be ignored. This way you can have a palette or other special-use layers that are not drawn into the animation.
 
-Open a PSD file (File -> Open, or Ctrl+O) and playback will begin immediately. That PSD file will now be watched for changes. If you make an edit and save your PSD file, Animation Viewer will automatically load your changes and begin displaying them.
+Open a PSD or SVG file (File -> Open, or Ctrl+O) and playback will begin immediately. That file will now be watched for changes. If you make an edit and save your file, Animation Viewer will automatically load your changes and begin displaying them.
 
 You can change the background color that your animation is drawn onto (Edit -> Set Background Color, or Ctrl+B). Note that you will only see this color if your frames contain transparent pixels.
 
-The Pause and Play buttons will pause and continue playback. If you have paused the animation, edits to your PSD file will not be immediately visible, but you will see them when you hit play again.
+The Pause and Play buttons will pause and continue playback. If you have paused the animation, edits to your file will not be immediately visible, but you will see them when you hit play again.
 
 The FPS setting changes how quickly your frames are played. Values can range from 1 to 99. Integer values only.
 
