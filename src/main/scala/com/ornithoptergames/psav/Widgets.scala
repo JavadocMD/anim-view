@@ -1,10 +1,8 @@
 package com.ornithoptergames.psav
 
 import java.net.URL
-
 import scala.concurrent.duration.Duration
 import scala.concurrent.duration.MILLISECONDS
-
 import FrameCanvasFsm._
 import Messages._
 import RxMessage.Implicits.ActorForwardable
@@ -34,12 +32,18 @@ import scalafx.scene.text.TextAlignment
 import scalafx.stage.FileChooser
 import scalafx.stage.FileChooser.ExtensionFilter
 import scalafx.stage.Stage
+import scalafx.scene.layout.Priority
+import com.ornithoptergames.psav.RxMessage.Impulse
+import com.ornithoptergames.psav.RxMessage.Implicits._
 
 object Resources {
   private def res(path: String): URL = this.getClass().getResource(path)
   private def resExt(path: String): String = res(path).toExternalForm()
   
-  val fontawesome: Font = Font.loadFont(resExt("fontawesome-webfont.ttf"), 20)
+  
+  val fontawesome32: Font = Font.loadFont(resExt("fontawesome-webfont.ttf"), 32)
+  val fontawesome20: Font = Font.loadFont(resExt("fontawesome-webfont.ttf"), 20)
+  val fontawesome12: Font = Font.loadFont(resExt("fontawesome-webfont.ttf"), 12)
   
   // JavaFX appears to ignore different sizes of icons and just uses the last one, so whatever.
   val icons: List[Image] = List(new Image(resExt("icon-64.png")))
@@ -52,6 +56,7 @@ object Config {
 }
 
 class Widgets(implicit stage: Stage, system: ActorSystem) {
+  import FontAwesomeButton._
   
   val helpText = new Label {
     id = "helpText"
@@ -77,12 +82,13 @@ class Widgets(implicit stage: Stage, system: ActorSystem) {
         // Remember directory for next time.
         initialDirectory = file.getParentFile
         // Then message the file for loading.
-        Messages.newFile.publish(file)
+        Messages.newFile.onNext(file)
       }
   }
   
   
   val menu = new MenuBar {
+    this.hgrow = Priority.Always
     
     this.menus = Seq(
       new Menu("_File") {
@@ -116,7 +122,7 @@ class Widgets(implicit stage: Stage, system: ActorSystem) {
   }
   
   
-  val pauseButton = new FontAwesomeButton("Pause", "\uf04c", "text-lg") {
+  val pauseButton = new FontAwesomeButton("Pause", "\uf04c", Large) {
     id = "pause"
     disable = true
     
@@ -126,11 +132,11 @@ class Widgets(implicit stage: Stage, system: ActorSystem) {
     animationPaused .subscribe(_ => runLater { disable = true })
     animationPlaying.subscribe(_ => runLater { disable = false; requestFocus() })
     
-    onAction = () => Messages.pause.publish()
+    onAction = () => Messages.pause.onNext(Impulse)
   }
   
   
-  val playButton = new FontAwesomeButton("Play", "\uf04b", "text-lg") {
+  val playButton = new FontAwesomeButton("Play", "\uf04b", Large) {
     id = "play"
     disable = true
     
@@ -140,7 +146,7 @@ class Widgets(implicit stage: Stage, system: ActorSystem) {
     animationPlaying.subscribe(_ => runLater { disable = true })
     animationPaused .subscribe(_ => runLater { disable = false; requestFocus() })
     
-    onAction = () => Messages.play.publish()
+    onAction = () => Messages.play.onNext(Impulse)
   }
   
   
@@ -151,15 +157,15 @@ class Widgets(implicit stage: Stage, system: ActorSystem) {
   val fpsInput = new TextField {
     text = "%.0f".format(Config.defaultFps)
     prefColumnCount = 2
-    prefHeight = 44
-    prefWidth = 44
+    prefHeight = 50
+    prefWidth = 50
     
     val fpsFormat = "^([1-9][0-9]?)$".r
     
     def fps: Int = fpsFormat.findFirstIn(text.value).map(_.toInt).getOrElse(Config.defaultFps.toInt)
     
     text.onChange((obsval, prev, now) => now match {
-      case fpsFormat(x) => Messages.fps.publish(now.toDouble)
+      case fpsFormat(x) => Messages.fps.onNext(now.toDouble)
       case _            => text = prev
     })
     
@@ -171,11 +177,11 @@ class Widgets(implicit stage: Stage, system: ActorSystem) {
     this.spacing = 2
     this.alignment = Pos.Center
     this.children = Seq(
-      new FontAwesomeButton("Up", "\uf0d8", "text-sm") {
-        this.onAction = () => fpsUp.publish()
+      new FontAwesomeButton("Up", "\uf0d8", Small) {
+        this.onAction = () => fpsUp.onNext(Impulse)
       },
-      new FontAwesomeButton("Down", "\uf0d7", "text-sm") {
-        this.onAction = () => fpsDown.publish()
+      new FontAwesomeButton("Down", "\uf0d7", Small) {
+        this.onAction = () => fpsDown.onNext(Impulse)
       })
   }
   
@@ -194,7 +200,7 @@ class Widgets(implicit stage: Stage, system: ActorSystem) {
     visible = false
     forceSize(this, 0, 0)
     
-    onAction = () => { bgColor.publish(value.value) }
+    onAction = () => { bgColor.onNext(value.value) }
   }
   
   
@@ -206,8 +212,8 @@ class Widgets(implicit stage: Stage, system: ActorSystem) {
     alignmentInParent = Pos.TopRight
     
     // Show when loading a file, hide when animation is loaded.
-    val show = (newFile.observable merge updateFile.observable).map(_ => true)
-    val hide = animationLoaded.observable.map(_ => false)
+    val show = (newFile merge updateFile).map(_ => true)
+    val hide = animationLoaded.map(_ => false)
     (show merge hide).subscribe(v => runLater { visible = v })
   }
   
@@ -221,7 +227,7 @@ class Widgets(implicit stage: Stage, system: ActorSystem) {
     bgColor.subscribe { setBgColor(_) }
     
     val limit = Duration(500, MILLISECONDS) // implicits not finding this... *sigh*
-    fps.observable.debounce(limit).forwardTo(fsm, SetFps(_))
+    fps.debounce(limit).forwardTo(fsm, SetFps(_))
     
     newFrames.forwardTo(fsm, NewFrames(_))
     updateFrames.forwardTo(fsm, UpdateFrames(_))
@@ -229,18 +235,22 @@ class Widgets(implicit stage: Stage, system: ActorSystem) {
     play.forwardTo(fsm, Play)
     pause.forwardTo(fsm, Pause)
     
-    def playing() = animationPlaying.publish()
-    def paused() = animationPaused.publish()
-    def loaded() = animationLoaded.publish()
+    def playing() = animationPlaying.onNext(Impulse)
+    def paused() = animationPaused.onNext(Impulse)
+    def loaded() = animationLoaded.onNext(Impulse)
   }
   
-  
-  class FontAwesomeButton(name: String, fontAwesomeIcon: String, iconClass: String) extends Button(name) {
+  object FontAwesomeButton {
+    trait FontSize { def font: Font }
+    case object Large extends FontSize { val font = Resources.fontawesome32 }
+    case object Medium extends FontSize { val font = Resources.fontawesome20 }
+    case object Small extends FontSize { val font = Resources.fontawesome12 }
+  }
+  class FontAwesomeButton(name: String, fontAwesomeIcon: String, iconSize: FontSize) extends Button(name) {
     alignment = Pos.Center
     contentDisplay = ContentDisplay.GraphicOnly
     graphic = new Text(fontAwesomeIcon) {
-      styleClass add iconClass
-      font = Resources.fontawesome
+      font = iconSize.font
     }
   }
 }

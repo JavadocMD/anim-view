@@ -1,7 +1,6 @@
 package com.ornithoptergames.psav
 
 import FrameCanvasFsm._
-
 import akka.actor.ActorSystem
 import akka.actor.FSM
 import akka.actor.Props
@@ -12,6 +11,7 @@ import scalafx.scene.canvas.Canvas
 import scalafx.scene.image.Image
 import scalafx.scene.paint.Color
 import scalafx.util.Duration
+import scalafx.application.Platform
 
 abstract class FrameCanvas(implicit system: ActorSystem) extends Canvas {
   val fsm = system.actorOf(Props(new FrameCanvasFsm(this)), "canvas-fsm")
@@ -26,7 +26,7 @@ abstract class FrameCanvas(implicit system: ActorSystem) extends Canvas {
     fsm ! Play
   }
   
-  def updateSize(f: FrameInfo) = {
+  def updateSize(f: FrameInfo) = Platform.runLater {
     width = f.size.w + 2
     height = f.size.h + 2
     visible = true

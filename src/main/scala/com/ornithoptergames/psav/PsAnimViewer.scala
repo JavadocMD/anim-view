@@ -12,6 +12,7 @@ import scalafx.scene.layout.BorderPane
 import scalafx.scene.layout.HBox
 import scalafx.scene.layout.StackPane
 import scalafx.stage.Stage
+import scalafx.scene.layout.Priority
 
 object PsAnimViewer extends JFXApp {
   implicit val system = ActorSystem("anim-view")
@@ -34,7 +35,10 @@ object PsAnimViewer extends JFXApp {
     }
     
     lazy val bp = new BorderPane {
-      this.top = widgets.menu
+      this.top = new HBox {
+        this.alignment = Pos.TopLeft
+        this.children = widgets.menu
+      }
       
       // The color picker is an invisible item (until it's activated); might as well put it here.
       this.left = widgets.colorPicker
