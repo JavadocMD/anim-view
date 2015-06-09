@@ -17,10 +17,11 @@ lazy val root = (project in file(".")).
 	  "batik" % "batik-svggen" % "1.6-1",
 	  "com.twelvemonkeys.common" % "common-lang" % "3.0.2",
 	  "com.twelvemonkeys.common" % "common-io" % "3.0.2",
-	  "com.twelvemonkeys.common" % "common-image" % "3.0.2"
-      //"com.twelvemonkeys.imageio" % "imageio-core" % "3.1.0",
-      //"com.twelvemonkeys.imageio" % "imageio-metadata" % "3.1.0",
-      //"com.twelvemonkeys.imageio" % "imageio-psd" % "3.1.0"
+	  "com.twelvemonkeys.common" % "common-image" % "3.0.2",
+      "com.twelvemonkeys.imageio" % "imageio-core" % "3.1.0",
+      "com.twelvemonkeys.imageio" % "imageio-metadata" % "3.1.0",
+      "com.twelvemonkeys.imageio" % "imageio-psd" % "3.1.0",
+      "com.twelvemonkeys.imageio" % "imageio-batik" % "3.1.0"
     ),
 	fork := true,
 	
