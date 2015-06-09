@@ -8,9 +8,9 @@ Check out the intro video here: http://youtu.be/KAiKDr-uafo
 
 Downloads are available in the [releases section](../../releases).
 
-If you have a Java 7 Runtime installed, choose a "java7" download. Simply unpack it someplace convenient and run `anim-view-<version>.jar`
+If you have a Java 7 or 8 Runtime installed, choose a "java7/8" download. Simply unpack it someplace convenient and run `anim-view-<version>.jar`
 
-If you are on Windows and either don't want to install Java 7 *or* you have a different Java runtime installed, choose the "win" download. It comes with a bundled Java 7 that you will not need to install. Simply unzip someplace convenient and run `anim-view-<version>.exe`
+If you are on Windows and either don't want to install Java or you have a different Java runtime installed, choose a "win32/64" download (depending on whether your system is 32- or 64-bit). It comes with a bundled Java runtime that you will not need to install. Simply unzip someplace convenient and run `anim-view-<version>.exe`
 
 ## Usage
 
