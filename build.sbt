@@ -3,7 +3,7 @@ import java.util.jar.Attributes
 lazy val root = (project in file(".")).
   settings(
     name := "anim-view",
-    version := "0.2.0",
+    version := "0.2.1",
     scalaVersion := "2.11.6",
     libraryDependencies ++= Seq(
       "org.scala-lang" % "scala-xml" % "2.11.0-M4",
